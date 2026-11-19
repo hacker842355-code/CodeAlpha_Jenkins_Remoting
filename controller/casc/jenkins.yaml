@@ -1,0 +1,48 @@
+jenkins:
+  systemMessage: "CodeAlpha - Jenkins Remoting demo (controller runs no builds)"
+  numExecutors: 0                      # node isolation: nothing builds on the controller
+  mode: EXCLUSIVE
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  slaveAgentPort: -1                   # disable the TCP inbound port; agents use WebSocket over 8080
+  remotingSecurity:
+    enabled: true                      # agent-to-controller access control
+  nodes:
+    - permanent:
+        name: "agent-amd64"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 2
+        labelString: "linux amd64"
+        mode: EXCLUSIVE                # only jobs that ask for these labels
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: "remoting"
+              failIfWorkDirIsMissing: false
+        retentionStrategy: "always"
+    - permanent:
+        name: "agent-arm64"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 2
+        labelString: "linux arm64"
+        mode: EXCLUSIVE
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: "remoting"
+              failIfWorkDirIsMissing: false
+        retentionStrategy: "always"
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+jobs:
+  - file: /var/jenkins_home/casc/jobs.groovy

@@ -1,0 +1,54 @@
+# Controller + two Remoting agents, each on its own network segment from the other.
+# Agents never get the Docker socket or controller filesystem (node isolation).
+services:
+  controller:
+    build: ./controller
+    container_name: jenkins-controller
+    ports:
+      - "8080:8080"
+    environment:
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?set JENKINS_ADMIN_PASSWORD in .env}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks: [control]
+    restart: unless-stopped
+
+  agent-amd64:
+    profiles: ["agents"]
+    build: ./agent
+    container_name: jenkins-agent-amd64
+    platform: linux/amd64
+    environment:
+      JENKINS_URL: http://controller:8080/
+      JENKINS_AGENT_NAME: agent-amd64
+      JENKINS_SECRET: ${AGENT_AMD64_SECRET:-}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+    networks: [control]
+    depends_on: [controller]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  agent-arm64:
+    profiles: ["agents"]
+    build: ./agent
+    container_name: jenkins-agent-arm64
+    platform: linux/arm64            # emulated with QEMU on x86 hosts; native on Apple Silicon/ARM servers
+    environment:
+      JENKINS_URL: http://controller:8080/
+      JENKINS_AGENT_NAME: agent-arm64
+      JENKINS_SECRET: ${AGENT_ARM64_SECRET:-}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+    networks: [control]
+    depends_on: [controller]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+networks:
+  control: {}
+
+volumes:
+  jenkins_home: {}
